@@ -1,0 +1,2429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISL Visa Queue — Since Jan 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent: #3b82f6;
+    --accent-2: #60a5fa;
+    --accent-rgb: 59,130,246;
+
+    --bg-1: #0b0f1a;
+    --bg-2: #111827;
+    --bg-3: #0e1a2e;
+
+    --glass: rgba(255,255,255,0.06);
+    --glass-strong: rgba(255,255,255,0.11);
+    --glass-stronger: rgba(17, 24, 39, 0.95);
+    --border: rgba(255,255,255,0.13);
+    --text: #eef1f7;
+    --text-dim: #94a3b8;
+    --shadow: 0 8px 32px rgba(0,0,0,0.35);
+
+    --mono: ui-monospace, SFMono-Regular, 'Roboto Mono', Consolas, monospace;
+
+    --c-waiting: #94a3b8;
+    --c-submission: #3b82f6;
+    --c-submitted: #2dd4bf;
+    --c-correction: #f59e0b;
+    --c-appointed: #22c55e;
+    --c-approved: #a855f7;
+    --c-rejected: #ef4444;
+  }
+
+  html[data-theme="light"]{
+    --bg-1: #eef2f9;
+    --bg-2: #e4ecf9;
+    --bg-3: #f3f6fc;
+
+    --glass: rgba(255,255,255,0.55);
+    --glass-strong: rgba(255,255,255,0.78);
+    --glass-stronger: rgba(255,255,255,0.95);
+    --border: rgba(15,23,42,0.10);
+    --text: #0f172a;
+    --text-dim: #475569;
+    --shadow: 0 8px 30px rgba(30,41,59,0.12);
+
+    --c-waiting: #64748b;
+    --c-submission: #2563eb;
+    --c-submitted: #0d9488;
+    --c-correction: #b45309;
+    --c-appointed: #16a34a;
+    --c-approved: #9333ea;
+    --c-rejected: #dc2626;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb),0.20), transparent 45%),
+      radial-gradient(circle at 88% 12%, rgba(var(--accent-rgb),0.14), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(var(--accent-rgb),0.10), transparent 55%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 20px 20px 60px;
+    transition: color 0.2s, background 0.3s;
+  }
+
+  .wrap{ max-width: 1200px; margin: 0 auto; }
+
+  .glass{
+    background: var(--glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  svg{ display:block; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    border-radius: 16px; padding: 10px 16px; margin-bottom: 8px;
+    position: sticky; top: 12px; z-index: 60;
+  }
+  .topbar-brand{ display:flex; align-items:center; gap: 10px; }
+  .brand-icon{
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 14px rgba(var(--accent-rgb),0.4);
+  }
+  .brand-icon svg{width:19px; height:19px; stroke:#fff;}
+  .wordmark{ font-weight: 800; font-size: 15px; letter-spacing:-0.01em; }
+  .wordmark small{ display:block; font-weight:500; font-size:11px; color:var(--text-dim); letter-spacing:0.03em; }
+
+  .topbar-actions{ display:flex; align-items:center; gap:8px; }
+  .icon-btn{
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px; height: 38px; border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:16px;
+    transition: border-color .2s ease, transform .15s ease;
+  }
+  .icon-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
+  .icon-btn svg{ width:17px; height:17px; }
+
+  .refresh-btn{
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    color: var(--text);
+    height: 38px; padding: 0 14px 0 12px; border-radius: 10px;
+    display:flex; align-items:center; gap:7px;
+    cursor:pointer; font-size:12.5px; font-weight:600; font-family:'Inter',sans-serif;
+    transition: border-color .2s ease, transform .15s ease;
+  }
+  .refresh-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
+  .refresh-btn:disabled{ opacity:.55; cursor:default; transform:none; }
+  .refresh-btn svg{ width:15px; height:15px; transition: transform .5s ease; }
+  .refresh-btn:disabled svg{ animation: spin 0.9s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .updated-line{
+    text-align:right; font-family: var(--mono); font-size:11px; color: var(--text-dim);
+    padding: 0 6px 20px; margin-top:-2px;
+  }
+  .updated-line span{ color: var(--text); }
+
+  .top-banner{
+    background: rgba(245,158,11,0.14);
+    border: 1px solid rgba(245,158,11,0.4);
+    color: var(--c-correction);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    margin-bottom: 18px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .top-banner strong{ font-weight:700; }
+  .top-banner a{ color: inherit; text-decoration: underline; cursor: pointer; }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    display:grid; grid-template-columns: 1.5fr 1fr; gap: 18px;
+    margin-bottom: 26px; align-items:start;
+  }
+  @media (max-width: 900px){ .hero{ grid-template-columns: 1fr; } }
+
+  .hero-main{ border-radius: 20px; padding: 30px; }
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent-2);
+    margin-bottom: 10px;
+    font-weight:600;
+  }
+  h1{
+    font-weight: 800;
+    font-size: clamp(24px, 3.4vw, 32px);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .subtitle{ color: var(--text-dim); margin-top: 8px; font-size: 14px; margin-bottom:22px; }
+
+  .lookup-row{ display:flex; gap: 10px; flex-wrap: wrap; }
+  .autocomplete-wrap{ position:relative; flex:1; min-width:200px; }
+  .search-icon{
+    position:absolute; left:16px; top:50%; transform:translateY(-50%);
+    width:17px; height:17px; stroke:var(--text-dim); pointer-events:none;
+  }
+  #lookupInput{
+    width:100%;
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 16px 14px 44px;
+    border-radius: 999px;
+    font-family:'Inter', sans-serif;
+    font-size: 14.5px;
+    outline: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  #lookupInput::placeholder{ color: var(--text-dim); }
+  #lookupInput:focus{ border-color: var(--accent); box-shadow:0 0 0 3px rgba(var(--accent-rgb),0.15); }
+  #lookupBtn{
+    background: linear-gradient(135deg,var(--accent),var(--accent-2));
+    color: #fff;
+    border: none;
+    padding: 0 24px;
+    border-radius: 999px;
+    font-family:'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow:0 6px 18px rgba(var(--accent-rgb),0.35);
+    display:flex; align-items:center; gap:8px;
+  }
+  #lookupBtn svg{ width:15px; height:15px; stroke:#fff; }
+  #lookupBtn:hover{ filter: brightness(1.08); }
+
+  .autocomplete-list{
+    display:none;
+    position:absolute;
+    top: calc(100% + 8px);
+    left:0; right:0;
+    background: var(--glass-stronger);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 20;
+    padding: 6px;
+  }
+  .autocomplete-list.open{ display:block; }
+  .ac-item{
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 10px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .ac-item:hover, .ac-item.active{ background: rgba(var(--accent-rgb),0.14); }
+  .ac-item .ac-name{ font-weight:500; }
+  .ac-item .ac-meta{ font-family: var(--mono); font-size:11.5px; color: var(--text-dim); white-space:nowrap; }
+
+  /* ---------- Favorites as chips ---------- */
+  .favorites-panel{ margin-top: 18px; }
+  .favorites-panel:empty{ margin-top:0; }
+  .fav-title{
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-dim); margin-bottom: 10px;
+  }
+  .fav-list{ display:flex; flex-wrap:wrap; gap:8px; }
+  .fav-item{
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 8px 6px 12px;
+    display:flex; align-items:center; gap: 8px;
+  }
+  .fav-item-main{ cursor:pointer; display:flex; align-items:baseline; gap:6px; }
+  .fav-name{ font-weight:600; font-size:13px; }
+  .fav-sub{ font-family: var(--mono); font-size:10.5px; color: var(--text-dim); }
+  .fav-remove{
+    background: var(--glass-stronger); border:none; color: var(--text-dim); cursor:pointer;
+    width:20px; height:20px; border-radius:50%; font-size: 12px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fav-remove:hover{ color:#fff; background: var(--c-correction); }
+  .fav-add-btn{
+    background: var(--glass-stronger);
+    border: 1px solid var(--border);
+    color: var(--accent-2);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family:'Inter', sans-serif; font-weight:600;
+    font-size: 12px;
+    cursor: pointer;
+    display:flex; align-items:center; gap:6px;
+    white-space:nowrap;
+  }
+  .fav-add-btn svg{ width:14px; height:14px; }
+  .fav-add-btn:hover{ border-color: var(--accent); }
+  .fav-add-btn:disabled{ opacity:0.5; cursor:default; }
+
+  /* ---------- Candidate list ---------- */
+  #lookupResults{ margin-top: 18px; }
+  .lookup-empty{ color: var(--text-dim); font-size: 13.5px; }
+  .candidate-list{ display:flex; flex-direction:column; gap: 8px; }
+  .candidate-item{
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display:flex; justify-content:space-between; align-items:center;
+    cursor: pointer;
+    transition: border-color 0.15s, transform .15s;
+  }
+  .candidate-item:hover{ border-color: var(--accent); transform: translateX(3px); }
+  .candidate-name{ font-weight: 600; font-size: 14.5px; }
+  .candidate-meta{ font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  /* ---------- Result: ticket-stub card ---------- */
+  .position-result{
+    position:relative;
+    display:flex; align-items:stretch; gap: 0;
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow:hidden;
+    flex-wrap: wrap;
+  }
+  .position-num{
+    flex:0 0 150px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 46px; font-weight: 800; color: var(--accent-2); line-height: 1;
+    background: rgba(var(--accent-rgb),0.08);
+    border-right: 2px dashed var(--border);
+    padding: 20px 10px;
+  }
+  .position-detail{ flex: 1; min-width: 200px; padding: 20px 22px; }
+  .position-detail .name{ font-weight: 700; font-size: 17px; }
+  .position-detail .meta{ color: var(--text-dim); font-size: 13px; margin-top: 6px; line-height:1.5; }
+  #favToggleBtn{ margin: 20px 20px 20px 0; align-self:center; }
+  @media (max-width:560px){
+    .position-num{ flex-basis:100%; border-right:none; border-bottom:2px dashed var(--border); padding:16px; }
+    #favToggleBtn{ margin: 0 20px 20px; width:calc(100% - 40px); justify-content:center; }
+  }
+
+  .breakdown{
+    margin-top: 14px;
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .breakdown-title{
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-dim); margin-bottom: 10px;
+  }
+  .breakdown-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .breakdown-row:last-child{ border-bottom:none; }
+  .breakdown-row .bd-count{ font-family: var(--mono); color: var(--accent-2); font-weight: 700; }
+
+  .share-row{ display:flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .share-btn{
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 15px;
+    border-radius: 999px;
+    font-family:'Inter', sans-serif;
+    font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+    display:flex; align-items:center; gap: 7px;
+    transition: border-color .2s ease, transform .15s ease;
+  }
+  .share-btn svg{ width:14px; height:14px; }
+  .share-btn:hover{ border-color: var(--accent); transform:translateY(-1px); }
+  .share-btn.copied{ border-color: var(--c-appointed); color: var(--c-appointed); }
+  .share-btn.whatsapp{ color: #3FCB6A; }
+  .share-btn.whatsapp:hover{ border-color: #3FCB6A; }
+
+  .back-link{
+    font-family: var(--mono);
+    font-size: 11.5px; color: var(--text-dim);
+    cursor: pointer; text-decoration: underline;
+    margin-top: 14px; display:inline-block;
+  }
+
+  /* ---------- Hero side: queue snapshot ---------- */
+  .hero-side{ border-radius: 20px; padding: 26px; }
+  .snapshot-title{ font-size: 12px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-dim); font-weight:700; margin-bottom: 16px; }
+  .snapshot-total{ margin-bottom: 18px; }
+  .snapshot-total .stat-num{ font-size: 42px; font-weight: 800; line-height:1; }
+  .snapshot-total .stat-label{ font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+  .snapshot-bar{
+    display:flex; height: 10px; border-radius: 999px; overflow:hidden;
+    background: rgba(255,255,255,0.08); margin-bottom: 18px;
+  }
+  .snapshot-bar .seg{ height:100%; width:0; transition: width .6s ease; }
+  #segWaiting{ background: var(--c-waiting); }
+  #segSubmission{ background: var(--c-submission); }
+  #segSubmitted{ background: var(--c-submitted); }
+  #segCorrection{ background: var(--c-correction); }
+  #segAppointed{ background: var(--c-appointed); }
+  #segApproved{ background: var(--c-approved); }
+  #segRejected{ background: var(--c-rejected); }
+
+  .snapshot-legend{ display:flex; flex-direction:column; gap: 11px; }
+  .legend-row{ display:flex; align-items:center; gap: 9px; font-size: 13.5px; }
+  .legend-row .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .dot.waiting{ background: var(--c-waiting); }
+  .dot.submission{ background: var(--c-submission); }
+  .dot.submitted{ background: var(--c-submitted); }
+  .dot.correction{ background: var(--c-correction); }
+  .dot.appointed{ background: var(--c-appointed); }
+  .dot.approved{ background: var(--c-approved); }
+  .dot.rejected{ background: var(--c-rejected); }
+  .legend-row .legend-num{ margin-left:auto; font-family: var(--mono); font-weight:700; color: var(--text); }
+
+  /* ---------- Browse section ---------- */
+  .browse-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom: 12px; padding: 0 4px; }
+  .browse-head h2{ font-size: 17px; font-weight: 800; letter-spacing:-0.01em; }
+  .count-pill{ font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+
+  .toolbar{
+    display:flex; gap: 10px; flex-wrap: wrap; align-items:center;
+    border-radius: 16px; padding: 12px; margin-bottom: 16px;
+  }
+  .search-mini{ position:relative; flex:1; min-width:180px; }
+  .search-mini svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); width:15px; height:15px; stroke:var(--text-dim); }
+  .search-mini input{
+    width:100%; background: var(--glass-strong); border:1px solid var(--border); color:var(--text);
+    padding: 10px 12px 10px 36px; border-radius: 10px; font-family:'Inter',sans-serif; font-size:13.5px; outline:none;
+  }
+  .search-mini input:focus{ border-color: var(--accent); }
+
+  .pill-tabs{ display:flex; gap:6px; flex-wrap:wrap; background: rgba(255,255,255,0.04); padding:4px; border-radius: 999px; border:1px solid var(--border); }
+  .pill-tab{
+    border:none; background:transparent; color:var(--text-dim);
+    padding: 7px 13px; border-radius: 999px; font-size: 12px; font-weight:600; cursor:pointer;
+    font-family:'Inter',sans-serif; transition: all .15s ease; white-space:nowrap;
+  }
+  .pill-tab:hover{ color: var(--text); }
+  .pill-tab.active{ background: linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 3px 10px rgba(var(--accent-rgb),0.35); }
+
+  #monthFilter{
+    background: var(--glass-strong); border:1px solid var(--border); color:var(--text);
+    padding: 10px 14px; border-radius: 10px; font-family:'Inter',sans-serif; font-size:13px; outline:none; cursor:pointer;
+  }
+  #monthFilter:focus{ border-color: var(--accent); }
+  .visually-hidden{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+
+  .table-wrap{ border-radius: 16px; overflow-x: auto; }
+  table{ width:100%; border-collapse: collapse; min-width: 560px; }
+  thead th{
+    text-align:left; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-dim);
+    background: var(--glass-strong);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top:0;
+  }
+  tbody td{ padding: 12px 16px; font-size: 13.5px; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background: rgba(var(--accent-rgb),0.06); }
+  .mono{ font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+
+  .stamp{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family: var(--mono);
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+  .stamp::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .stamp.waiting{ color: var(--c-waiting); background: rgba(148,163,184,0.14); }
+  .stamp.gotSubmission{ color: var(--c-submission); background: rgba(var(--accent-rgb),0.14); }
+  .stamp.submitted{ color: var(--c-submitted); background: rgba(45,212,191,0.14); }
+  .stamp.correction{ color: var(--c-correction); background: rgba(245,158,11,0.14); }
+  .stamp.appointed{ color: var(--c-appointed); background: rgba(34,197,94,0.14); }
+  .stamp.visaApproved{ color: var(--c-approved); background: rgba(168,85,247,0.14); }
+  .stamp.visaRejected{ color: var(--c-rejected); background: rgba(239,68,68,0.14); }
+
+  .state-msg{ padding: 60px 20px; text-align:center; color: var(--text-dim); font-family: var(--mono); font-size: 13px; }
+  .state-msg.error{ color: var(--c-correction); }
+
+  footer{
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-dim);
+  }
+  footer a{ color: var(--text-dim); text-decoration: underline; }
+  footer a:hover{ color: var(--accent-2); }
+
+  ::selection{ background: rgba(var(--accent-rgb),0.35); color: #fff; }
+
+  /* ---------- Date report section ---------- */
+  .date-report{ margin-top: 34px; }
+  .progress-mini{
+    width: 90px; height: 6px; border-radius: 999px;
+    background: rgba(255,255,255,0.08); overflow:hidden; display:inline-block; vertical-align:middle;
+  }
+  .progress-mini .fill{ height:100%; background: var(--c-appointed); border-radius: 999px; }
+
+  /* ---------- Monthly progress section (ring cards) ---------- */
+  .monthly-progress{ margin-bottom: 34px; }
+  .month-progress-panel{ border-radius: 18px; padding: 22px; }
+  .month-progress-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px;
+  }
+  .month-card{
+    background: var(--glass-strong);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    transition: transform .15s ease, border-color .2s ease;
+  }
+  .month-card:hover{ transform: translateY(-3px); border-color: var(--accent); }
+  .month-card-head{ width: 100%; }
+  .month-card-name{
+    display: block; font-weight: 700; font-size: 13.5px; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .month-card-total{ font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); }
+  .month-ring-wrap{ position: relative; width: 116px; height: 116px; }
+  .month-ring{ width: 116px; height: 116px; transform: rotate(-90deg); }
+  .ring-track{ fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 10; }
+  .ring-fill{
+    fill: none; stroke: var(--c-appointed); stroke-width: 10; stroke-linecap: round;
+    transition: stroke-dashoffset .7s ease;
+  }
+  .month-ring-label{
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .ring-pct{ font-weight: 800; font-size: 22px; line-height: 1; }
+  .ring-sub{ font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  .month-card-stats{ display: flex; flex-direction: column; gap: 7px; width: 100%; }
+  .month-stat{ display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+  .month-stat .dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .month-stat .stat-num{ margin-left: auto; font-family: var(--mono); font-weight: 700; }
+
+  @media (max-width: 640px){
+    body{ padding: 14px 12px 50px; }
+    .topbar{ top:6px; }
+    .hero-main, .hero-side{ padding: 20px; }
+    .lookup-row{ flex-direction: column; }
+    #lookupBtn{ width: 100%; justify-content:center; padding: 14px; }
+    .toolbar{ flex-direction: column; align-items: stretch; }
+    #monthFilter{ width:100%; }
+    .pill-tabs{ overflow-x:auto; }
+  }
+
+  /* ---------- Two queues ---------- */
+  .position-num{ flex-direction: column; text-align: center; gap: 8px; }
+  .pn-cap{ font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); font-weight: 700; line-height: 1.2; }
+
+  .queue-split{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .queue-box{ background: var(--glass-strong); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+  .queue-box-num{ font-size: 26px; font-weight: 800; line-height: 1; }
+  .queue-box-label{ font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-top: 6px; }
+  .queue-box.q-wait .queue-box-num{ color: var(--c-waiting); }
+  .queue-box.q-appt .queue-box-num{ color: var(--accent-2); }
+
+  .appt-queue{ margin-bottom: 34px; }
+  .appt-panel{ border-radius: 18px; padding: 22px; }
+  .appt-intro{ color: var(--text-dim); font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+  .range-row{ display:flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 18px; }
+  .range-field{ display:flex; flex-direction:column; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); font-weight: 600; }
+  .range-field input, .range-field select{
+    background: var(--glass-strong); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 12px; border-radius: 10px; font-family:'Inter',sans-serif; font-size: 13px; outline: none; min-width: 160px;
+  }
+  .range-field input:focus, .range-field select:focus{ border-color: var(--accent); }
+  html[data-theme="dark"] .range-field input{ color-scheme: dark; }
+  html[data-theme="light"] .range-field input{ color-scheme: light; }
+  .range-summary{ display:grid; grid-template-columns: 1fr 1.3fr; gap: 18px; align-items: center; }
+  .range-big{ background: var(--glass-strong); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+  .range-num{ font-size: 44px; font-weight: 800; line-height: 1; color: var(--accent-2); }
+  .range-label{ display:block; font-size: 12px; color: var(--text-dim); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .range-bar{ display:flex; height: 10px; border-radius: 999px; overflow:hidden; background: rgba(255,255,255,0.08); margin: 4px 0 8px; }
+  .range-bar .rb-done{ background: var(--c-appointed); height:100%; }
+  .range-bar .rb-pending{ background: var(--c-waiting); height:100%; }
+  .range-appointed{ font-size: 12.5px; color: var(--text-dim); margin-top: 10px; }
+  .range-appointed strong{ color: var(--text); }
+  .range-note{ font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); margin-top: 14px; }
+  @media (max-width: 640px){
+    .range-summary{ grid-template-columns: 1fr; }
+    .range-field{ flex: 1 1 140px; }
+    .range-field input, .range-field select{ min-width: 0; width: 100%; }
+  }
+
+  .queue-scores{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .score-box{ background: var(--glass-strong); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  .score-box.active{ border-color: rgba(var(--accent-rgb),0.55); background: rgba(var(--accent-rgb),0.10); }
+  .score-box.done{ border-color: rgba(34,197,94,0.38); }
+  .score-box.idle{ opacity: 0.72; }
+  .score-label{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); font-weight: 700; }
+  .score-val{ font-size: 22px; font-weight: 800; margin-top: 6px; }
+  .score-box.active .score-val{ color: var(--accent-2); }
+  .score-box.done .score-val{ color: var(--c-appointed); }
+  .score-sub{ font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+  @media (max-width: 560px){ .queue-scores{ grid-template-columns: 1fr; } }
+
+  .range-presets{ display:flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 18px; }
+  .chip-btn{
+    background: var(--glass-strong); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 7px 13px; border-radius: 999px; font-family:'Inter',sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: border-color .15s ease, color .15s ease;
+  }
+  .chip-btn:hover{ color: var(--text); border-color: var(--accent); }
+  .chip-btn.active{ background: linear-gradient(135deg,var(--accent),var(--accent-2)); color: #fff; border-color: transparent; }
+
+  .date-pending{ margin-top: 22px; }
+  .dp-head{ display:flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .dp-title{ font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); font-weight: 700; }
+  .dp-toggle{ font-size: 12px; color: var(--text-dim); display:flex; align-items:center; gap: 6px; cursor: pointer; }
+  .dp-scroll{ max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--glass-strong); }
+  .dp-table{ min-width: 0; }
+  .dp-table tbody tr[data-date]{ cursor: pointer; }
+  .dp-pend{ font-family: var(--mono); font-weight: 700; color: var(--accent-2); }
+  .dp-bar{ display:inline-block; width: 90px; height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; vertical-align: middle; }
+  .dp-bar span{ display:block; height: 100%; background: var(--accent-2); border-radius: 999px; }
+  .dp-pct{ font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); margin-left: 8px; }
+
+  .expected-line{ color: var(--accent-2) !important; font-weight: 600; }
+  .dp-exp{ font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+  .queue-box-note{ font-size: 10.5px; color: var(--text-dim); margin-top: 4px; min-height: 0; }
+  .queue-box-note:empty{ display:none; }
+  .stale-row{ display:flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-dim); line-height: 1.5;
+    background: var(--glass-strong); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
+  .stale-row #staleText{ flex: 1 1 320px; }
+  .dp-stale td{ opacity: 0.6; }
+  .dp-tag{ font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-correction); border: 1px solid var(--c-correction); border-radius: 999px; padding: 1px 7px; margin-left: 6px; white-space: nowrap; }
+  .update-link-row{ margin-top: 10px; font-size: 12.5px; color: var(--text-dim); }
+  .update-link-row a{ color: var(--accent-2); font-weight: 600; text-decoration: none; }
+  .update-link-row a:hover{ text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="topbar glass">
+    <div class="topbar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="wordmark">ISL Visa Queue<small>Islamabad · Applicant Tracker</small></div>
+    </div>
+    <div class="topbar-actions">
+      <button id="themeToggle" class="icon-btn" title="Toggle light/dark">🌙</button>
+      <button id="refreshBtn" class="refresh-btn" title="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        <span class="btn-label">Refresh</span>
+      </button>
+    </div>
+  </nav>
+  <div class="updated-line">Last updated <span id="lastUpdated">—</span></div>
+  <div id="topBanner" class="top-banner" style="display:none;"></div>
+
+  <section class="hero">
+    <div class="hero-main glass">
+      <div class="eyebrow">ISL &middot; Islamabad Visa Queue</div>
+      <h1>Check your queue position</h1>
+      <div class="subtitle">All applicants tracked since January 2026.</div>
+
+      <div class="lookup-row" style="position:relative;">
+        <div class="autocomplete-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="lookupInput" placeholder="Enter full name…" autocomplete="off">
+          <div id="autocompleteList" class="autocomplete-list"></div>
+        </div>
+        <button id="lookupBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Search
+        </button>
+      </div>
+
+      <div id="favoritesPanel" class="favorites-panel"></div>
+      <div id="lookupResults"></div>
+    </div>
+
+    <aside class="hero-side glass">
+      <div class="snapshot-title">Queue Snapshot</div>
+      <div class="snapshot-total">
+        <div class="stat-num" id="statTotal">—</div>
+        <div class="stat-label">Total Applicants</div>
+      </div>
+      <div class="queue-split">
+        <div class="queue-box q-wait"><div class="queue-box-num" id="statQueueWaiting">—</div><div class="queue-box-label">Waiting list</div></div>
+        <div class="queue-box q-appt"><div class="queue-box-num" id="statQueueAppt">—</div><div class="queue-box-label">Awaiting appointment</div><div class="queue-box-note" id="statQueueApptNote"></div></div>
+      </div>
+      <div class="snapshot-bar">
+        <div class="seg" id="segWaiting"></div>
+        <div class="seg" id="segSubmission"></div>
+        <div class="seg" id="segSubmitted"></div>
+        <div class="seg" id="segCorrection"></div>
+        <div class="seg" id="segAppointed"></div>
+        <div class="seg" id="segApproved"></div>
+        <div class="seg" id="segRejected"></div>
+      </div>
+      <div class="snapshot-legend">
+        <div class="legend-row"><span class="dot waiting"></span>Waiting<span class="legend-num" id="statWaiting">—</span></div>
+        <div class="legend-row"><span class="dot submission"></span>Got Submission<span class="legend-num" id="statSubmission">—</span></div>
+        <div class="legend-row"><span class="dot submitted"></span>Submitted<span class="legend-num" id="statSubmitted">—</span></div>
+        <div class="legend-row"><span class="dot correction"></span>Correction<span class="legend-num" id="statCorrection">—</span></div>
+        <div class="legend-row"><span class="dot appointed"></span>Appointed<span class="legend-num" id="statAppointed">—</span></div>
+        <div class="legend-row"><span class="dot approved"></span>Visa Approved<span class="legend-num" id="statApproved">—</span></div>
+        <div class="legend-row"><span class="dot rejected"></span>Visa Rejected<span class="legend-num" id="statRejected">—</span></div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="appt-queue">
+    <div class="browse-head">
+      <h2>Appointment Queue</h2>
+      <span class="count-pill" id="apptQueueCountPill"></span>
+    </div>
+    <div class="appt-panel glass">
+      <div class="appt-intro">Applicants who have a submission slot and are still waiting for an appointment (Got Submission, Submitted, Under Correction), ordered by got-submission date. Tap a quick range, pick your own dates, or click a date in the table to focus on it.</div>
+      <div class="stale-row">
+        <span id="staleText"></span>
+        <label class="dp-toggle"><input type="checkbox" id="showStale"> Include earlier dates anyway</label>
+      </div>
+      <div class="range-row">
+        <label class="range-field"><span>Count by</span>
+          <select id="rangeField">
+            <option value="gotSubDate">Got-submission date</option>
+            <option value="joinDate">Join date</option>
+          </select>
+        </label>
+        <label class="range-field"><span>From</span><input type="date" id="rangeFrom"></label>
+        <label class="range-field"><span>To</span><input type="date" id="rangeTo"></label>
+        <button type="button" class="share-btn" id="rangeReset"><span class="btn-label">Reset</span></button>
+      </div>
+      <div class="range-presets" id="rangePresets"></div>
+      <div id="rangeResult"></div>
+    </div>
+  </section>
+
+  <section class="monthly-progress">
+    <div class="browse-head">
+      <h2>Monthly Progress</h2>
+      <span class="count-pill" id="monthlyProgressCountPill"></span>
+    </div>
+    <div class="month-progress-panel glass">
+      <div class="month-progress-grid" id="monthlyProgressGrid"></div>
+      <div class="state-msg" id="monthlyProgressStateMsg">Loading…</div>
+    </div>
+  </section>
+
+  <section class="browse">
+    <div class="browse-head">
+      <h2>All Applicants</h2>
+      <span class="count-pill" id="countPill"></span>
+    </div>
+    <div class="toolbar glass">
+      <div class="search-mini">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchBox" placeholder="Search by name…">
+      </div>
+      <div class="pill-tabs" id="stageTabs">
+        <button type="button" class="pill-tab active" data-value="all">All</button>
+        <button type="button" class="pill-tab" data-value="waiting">Waiting</button>
+        <button type="button" class="pill-tab" data-value="gotSubmission">Submission</button>
+        <button type="button" class="pill-tab" data-value="submitted">Submitted</button>
+        <button type="button" class="pill-tab" data-value="correction">Correction</button>
+        <button type="button" class="pill-tab" data-value="appointed">Appointed</button>
+        <button type="button" class="pill-tab" data-value="visaApproved">Approved</button>
+        <button type="button" class="pill-tab" data-value="visaRejected">Rejected</button>
+      </div>
+      <select id="stageFilter" class="visually-hidden" tabindex="-1" aria-hidden="true">
+        <option value="all">All stages</option>
+        <option value="waiting">Waiting</option>
+        <option value="gotSubmission">Got Submission</option>
+        <option value="submitted">Submitted</option>
+        <option value="correction">Correction</option>
+        <option value="appointed">Appointed</option>
+        <option value="visaApproved">Visa Approved</option>
+        <option value="visaRejected">Visa Rejected</option>
+      </select>
+      <select id="monthFilter">
+        <option value="all">All months</option>
+      </select>
+    </div>
+
+    <div class="table-wrap glass">
+      <table id="dataTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>#</th><th>Name</th><th>Join Date</th><th>Join Time</th><th>Stage</th><th>Expected</th><th>Month</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="state-msg" id="stateMsg">Loading applicant data…</div>
+    </div>
+  </section>
+
+  <section class="date-report">
+    <div class="browse-head">
+      <h2>Report by Join Date</h2>
+      <span class="count-pill" id="dateReportCountPill"></span>
+    </div>
+    <div class="toolbar glass">
+      <div class="pill-tabs" id="dateReportTabs">
+        <button type="button" class="pill-tab active" data-value="all">All dates</button>
+        <button type="button" class="pill-tab" data-value="pending">Still pending</button>
+        <button type="button" class="pill-tab" data-value="done">Done</button>
+      </div>
+      <div style="flex:1;"></div>
+      <button class="share-btn" id="exportCurrentPdfBtn" title="Export the dates currently shown above">
+        <span class="btn-label">Export view (PDF)</span>
+      </button>
+      <button class="share-btn" id="exportAllPdfBtn" title="Export every date, ignoring the active filter">
+        <span class="btn-label">Export full report (PDF)</span>
+      </button>
+    </div>
+    <div class="table-wrap glass">
+      <table id="dateReportTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>Join Date</th><th>Total Joined</th><th>Still Waiting</th><th>Progress</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="dateReportBody"></tbody>
+      </table>
+      <div class="state-msg" id="dateReportStateMsg">Loading…</div>
+    </div>
+  </section>
+
+  <footer>
+    Built by Muntazir Mahdi &middot; <a href="mailto:muntazirmahdi.de@gmail.com">muntazirmahdi.de@gmail.com</a>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+const API_BASE = "/api";
+const START_MONTH = "2026-01";
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+
+let allData = [];
+let dateReportFilter = 'all';
+let isLoadingData = false;
+
+/* ---------- Security: escape untrusted strings before innerHTML use ---------- */
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+/* ---------- Theme ---------- */
+function initTheme(){
+  const saved = (() => { try { return localStorage.getItem('theme'); } catch(e){ return null; } })();
+  const preferred = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  setTheme(preferred);
+}
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeToggle').textContent = theme === 'light' ? '☀️' : '🌙';
+  try { localStorage.setItem('theme', theme); } catch(e){ /* ignore if storage unavailable */ }
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  setTheme(current === 'light' ? 'dark' : 'light');
+});
+initTheme();
+
+// Keep the icon in sync if the OS-level color scheme changes mid-session
+// (only when the user hasn't explicitly chosen a theme via the toggle).
+try {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+    let saved = null;
+    try { saved = localStorage.getItem('theme'); } catch(err){ /* ignore */ }
+    if (!saved) setTheme(e.matches ? 'light' : 'dark');
+  });
+} catch(e) { /* matchMedia listener unsupported, ignore */ }
+
+/* ---------- Helpers ---------- */
+function stageLabel(stage){
+  const map = { waiting: "Waiting", gotSubmission: "Got Submission", submitted: "Submitted", correction: "Correction", appointed: "Appointed", visaApproved: "Visa Approved", visaRejected: "Visa Rejected" };
+  return map[stage] || stage;
+}
+function deriveStage(item){
+  if (item.hasVisaApproved) return "visaApproved";
+  if (item.hasVisaRejected) return "visaRejected";
+  if (item.hasAppointment) return "appointed";
+  if (item.hasCorrection) return "correction";
+  if (item.hasSubmitted) return "submitted";
+  if (item.hasGotSlot) return "gotSubmission";
+  if (item.stage) return item.stage === "waiting" ? "waiting" : item.stage;
+  return "waiting";
+}
+function sortKey(r){ return `${r.joinDate} ${r.joinTime}`; }
+function calendarMonthKey(dateStr){ return dateStr && dateStr.length >= 7 ? dateStr.slice(0, 7) : 'unknown'; }
+function calendarMonthLabel(key){
+  if (key === 'unknown') return 'Unknown date';
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+/* ---------- Fetching ---------- */
+let _dataPromise = null;
+function loadData(){
+  // One static file, refreshed by GitHub Actions. Relative URL works on github.io/<repo>/.
+  if (!_dataPromise){
+    _dataPromise = fetch(`data/applicants.json?t=${Math.floor(Date.now() / 60000)}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`data file returned ${res.status}`);
+        return res.json();
+      })
+      .catch(err => { _dataPromise = null; throw err; });
+  }
+  return _dataPromise;
+}
+
+async function fetchMonths(){
+  const { records } = await loadData();
+  const set = new Set(records.map(r => (r.joinDate || '').slice(0, 7)).filter(v => /^\d{4}-\d{2}$/.test(v)));
+  return [...set].filter(v => v >= START_MONTH).sort();
+}
+
+async function fetchMonthData(month, retries = 2){
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++){
+    try {
+      const { records } = await loadData();
+      return records
+        .filter(item => (item.joinDate || '').startsWith(month))
+        .map(item => ({
+          fullName: item.fullName || "Unnamed",
+          joinDate: item.joinDate || "",
+          joinTime: item.joinTime || "",
+          stage: deriveStage(item),
+          gotSubDate: item.gotSubmissionDate || "",
+          appointmentDate: item.appointmentDate || "",
+          expectedSubmission: item.expectedSubmission || "",
+          expectedAppointment: item.expectedAppointment || "",
+          month
+        }));
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) await new Promise(r => setTimeout(r, 1200 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+/* ---------- Stats / table ---------- */
+function updateStats(rows){
+  const counts = { waiting:0, gotSubmission:0, submitted:0, correction:0, appointed:0, visaApproved:0, visaRejected:0 };
+  rows.forEach(r => { if (counts[r.stage] !== undefined) counts[r.stage]++; });
+  document.getElementById('statTotal').textContent = rows.length;
+  document.getElementById('statWaiting').textContent = counts.waiting;
+  document.getElementById('statSubmission').textContent = counts.gotSubmission;
+  document.getElementById('statSubmitted').textContent = counts.submitted;
+  document.getElementById('statCorrection').textContent = counts.correction;
+  document.getElementById('statAppointed').textContent = counts.appointed;
+  document.getElementById('statApproved').textContent = counts.visaApproved;
+  document.getElementById('statRejected').textContent = counts.visaRejected;
+  document.getElementById('statQueueWaiting').textContent = counts.waiting;
+  const apptRows = rows.filter(r => APPT_QUEUE_STAGES.includes(r.stage));
+  const win = getApptWindow();
+  const apptActive = apptRows.filter(r => isApptActive(r, win.cutoff)).length;
+  document.getElementById('statQueueAppt').textContent = apptActive;
+  const staleN = apptRows.length - apptActive;
+  document.getElementById('statQueueApptNote').textContent = staleN > 0 ? `+${staleN} older not counted` : '';
+
+  // Presentational only: proportion bar in the Queue Snapshot panel.
+  const total = rows.length || 1;
+  const segMap = {
+    segWaiting: counts.waiting,
+    segSubmission: counts.gotSubmission,
+    segSubmitted: counts.submitted,
+    segCorrection: counts.correction,
+    segAppointed: counts.appointed,
+    segApproved: counts.visaApproved,
+    segRejected: counts.visaRejected
+  };
+  Object.entries(segMap).forEach(([id, count]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = `${(count / total) * 100}%`;
+  });
+}
+
+function populateMonthFilter(labels){
+  const sel = document.getElementById('monthFilter');
+  sel.querySelectorAll('option:not([value="all"])').forEach(o => o.remove());
+  labels.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    sel.appendChild(opt);
+  });
+}
+
+function renderTable(){
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+  const stage = document.getElementById('stageFilter').value;
+  const month = document.getElementById('monthFilter').value;
+
+  const filtered = allData.filter(r => {
+    if (search && !r.fullName.toLowerCase().includes(search)) return false;
+    if (stage !== 'all' && r.stage !== stage) return false;
+    if (month !== 'all' && r.month !== month) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  filtered
+    .sort((a,b) => (a.joinDate + a.joinTime).localeCompare(b.joinDate + b.joinTime))
+    .forEach((r, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${i + 1}</td>
+        <td>${escapeHtml(r.fullName)}</td>
+        <td class="mono">${escapeHtml(r.joinDate)}</td>
+        <td class="mono">${escapeHtml(r.joinTime)}</td>
+        <td><span class="stamp ${r.stage}">${stageLabel(r.stage)}</span></td>
+        <td class="mono">${escapeHtml(r.expectedAppointment || r.expectedSubmission || '')}</td>
+        <td class="mono">${escapeHtml(r.month)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  document.getElementById('countPill').textContent = `Showing ${filtered.length} of ${allData.length}`;
+  document.getElementById('dataTable').style.display = filtered.length ? 'table' : 'none';
+
+  const stateMsg = document.getElementById('stateMsg');
+  if (allData.length === 0){ stateMsg.style.display = 'block'; stateMsg.textContent = 'No applicants found.'; }
+  else if (filtered.length === 0){ stateMsg.style.display = 'block'; stateMsg.textContent = 'No results match your filters.'; }
+  else { stateMsg.style.display = 'none'; }
+}
+
+/* ---------- Monthly Progress (done vs pending, per join month) ---------- */
+function getMonthlyProgress(){
+  const groups = {};
+  allData.forEach(r => {
+    const key = r.month || 'Unknown';
+    if (!groups[key]) groups[key] = { total: 0, waiting: 0 };
+    groups[key].total++;
+    if (r.stage === 'waiting') groups[key].waiting++;
+  });
+  return groups;
+}
+
+const MONTH_RING_RADIUS = 50;
+const MONTH_RING_CIRCUMFERENCE = 2 * Math.PI * MONTH_RING_RADIUS;
+
+function renderMonthlyProgress(){
+  const groups = getMonthlyProgress();
+  const months = Object.keys(groups).sort();
+
+  const grid = document.getElementById('monthlyProgressGrid');
+  grid.innerHTML = months.map(m => {
+    const g = groups[m];
+    const done = g.total - g.waiting;
+    const donePct = g.total ? Math.round((done / g.total) * 100) : 0;
+    const offset = MONTH_RING_CIRCUMFERENCE * (1 - donePct / 100);
+    return `
+      <div class="month-card">
+        <div class="month-card-head">
+          <span class="month-card-name" title="${escapeHtml(m)}">${escapeHtml(m)}</span>
+          <span class="month-card-total">${g.total} total</span>
+        </div>
+        <div class="month-ring-wrap">
+          <svg class="month-ring" viewBox="0 0 120 120">
+            <circle class="ring-track" cx="60" cy="60" r="${MONTH_RING_RADIUS}"></circle>
+            <circle class="ring-fill" cx="60" cy="60" r="${MONTH_RING_RADIUS}"
+              style="stroke-dasharray:${MONTH_RING_CIRCUMFERENCE};stroke-dashoffset:${offset};"></circle>
+          </svg>
+          <div class="month-ring-label">
+            <span class="ring-pct">${donePct}%</span>
+            <span class="ring-sub">Done</span>
+          </div>
+        </div>
+        <div class="month-card-stats">
+          <div class="month-stat"><span class="dot appointed"></span>Done<span class="stat-num">${done}</span></div>
+          <div class="month-stat"><span class="dot waiting"></span>Pending<span class="stat-num">${g.waiting}</span></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('monthlyProgressCountPill').textContent = `${months.length} month${months.length === 1 ? '' : 's'}`;
+  grid.style.display = months.length ? 'grid' : 'none';
+
+  const stateMsg = document.getElementById('monthlyProgressStateMsg');
+  if (months.length === 0){ stateMsg.style.display = 'block'; stateMsg.textContent = 'No applicant data yet.'; }
+  else { stateMsg.style.display = 'none'; }
+}
+
+/* ---------- Report by Join Date ---------- */
+function getDateGroups(){
+  const groups = {};
+  allData.forEach(r => {
+    const d = r.joinDate || 'Unknown';
+    if (!groups[d]) groups[d] = { total: 0, waiting: 0 };
+    groups[d].total++;
+    if (r.stage === 'waiting') groups[d].waiting++;
+  });
+  return groups;
+}
+function filterDatesByStatus(groups, filter){
+  let dates = Object.keys(groups).sort();
+  if (filter === 'pending') dates = dates.filter(d => groups[d].waiting > 0);
+  else if (filter === 'done') dates = dates.filter(d => groups[d].waiting === 0);
+  return dates;
+}
+function dateReportFilterLabel(filter){
+  const map = { all: 'All dates', pending: 'Still pending', done: 'Done' };
+  return map[filter] || 'All dates';
+}
+
+function renderDateReport(){
+  const groups = getDateGroups();
+  const dates = filterDatesByStatus(groups, dateReportFilter);
+
+  const tbody = document.getElementById('dateReportBody');
+  tbody.innerHTML = '';
+
+  dates.forEach(d => {
+    const g = groups[d];
+    const done = g.waiting === 0;
+    const cleared = g.total - g.waiting;
+    const pct = g.total ? Math.round((cleared / g.total) * 100) : 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${escapeHtml(d)}</td>
+      <td class="mono">${g.total}</td>
+      <td class="mono">${g.waiting}</td>
+      <td>
+        <span class="progress-mini"><span class="fill" style="width:${pct}%"></span></span>
+        <span class="mono" style="margin-left:8px;">${pct}%</span>
+      </td>
+      <td><span class="stamp ${done ? 'appointed' : 'waiting'}">${done ? 'Done' : `${g.waiting} left`}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const totalDates = Object.keys(groups).length;
+  document.getElementById('dateReportCountPill').textContent = `Showing ${dates.length} of ${totalDates} dates`;
+  document.getElementById('dateReportTable').style.display = dates.length ? 'table' : 'none';
+
+  const stateMsg = document.getElementById('dateReportStateMsg');
+  if (totalDates === 0){ stateMsg.style.display = 'block'; stateMsg.textContent = 'No applicant data yet.'; }
+  else if (dates.length === 0){ stateMsg.style.display = 'block'; stateMsg.textContent = 'No dates match this filter.'; }
+  else { stateMsg.style.display = 'none'; }
+}
+
+document.querySelectorAll('#dateReportTabs .pill-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#dateReportTabs .pill-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dateReportFilter = btn.dataset.value;
+    renderDateReport();
+  });
+});
+
+/* ---------- Date report: PDF export ---------- */
+function exportDateReportPDF(scope){
+  if (!window.jspdf || !window.jspdf.jsPDF){
+    alert('PDF library did not load. Check your internet connection and try again.');
+    return;
+  }
+  const groups = getDateGroups();
+  const filterForScope = scope === 'current' ? dateReportFilter : 'all';
+  const dates = filterDatesByStatus(groups, filterForScope);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  const ACCENT = [59, 130, 246];
+  const ACCENT_DARK = [37, 99, 235];
+  const DONE_GREEN = [22, 163, 74];
+  const WAITING_GREY = [100, 116, 139];
+  const TEXT_DIM = [100, 116, 139];
+
+  // Header band
+  doc.setFillColor(...ACCENT);
+  doc.rect(0, 0, pageWidth, 86, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text('ISL Visa Queue', 40, 36);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text('Report by Join Date', 40, 58);
+
+  const generatedStr = new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  doc.setFontSize(9);
+  doc.text(`Scope: ${dateReportFilterLabel(filterForScope)}`, pageWidth - 40, 36, { align: 'right' });
+  doc.text(`Generated: ${generatedStr}`, pageWidth - 40, 50, { align: 'right' });
+
+  const rows = dates.map(d => {
+    const g = groups[d];
+    const done = g.waiting === 0;
+    return [d, String(g.total), String(g.waiting), done ? 'Done' : `${g.waiting} left`];
+  });
+
+  doc.autoTable({
+    startY: 110,
+    margin: { left: 40, right: 40 },
+    head: [['Join Date', 'Total Joined', 'Still Waiting', 'Status']],
+    body: rows,
+    theme: 'grid',
+    headStyles: {
+      fillColor: ACCENT_DARK,
+      textColor: 255,
+      fontStyle: 'bold',
+      fontSize: 10
+    },
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 7,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.5,
+      textColor: [30, 41, 59]
+    },
+    alternateRowStyles: { fillColor: [240, 245, 253] },
+    columnStyles: {
+      0: { cellWidth: 130 },
+      1: { halign: 'center' },
+      2: { halign: 'center' },
+      3: { halign: 'center', fontStyle: 'bold' }
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3){
+        const isDone = data.cell.raw === 'Done';
+        data.cell.styles.textColor = isDone ? DONE_GREEN : WAITING_GREY;
+      }
+    },
+    didDrawPage: () => {
+      const pageCount = doc.internal.getNumberOfPages();
+      const current = doc.internal.getCurrentPageInfo().pageNumber;
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...TEXT_DIM);
+      doc.text('ISL Visa Queue Tracker · Built by Muntazir Mahdi', 40, pageHeight - 25);
+      doc.text(`Page ${current} of ${pageCount}`, pageWidth - 40, pageHeight - 25, { align: 'right' });
+    }
+  });
+
+  if (rows.length === 0){
+    doc.setFontSize(11);
+    doc.setTextColor(...TEXT_DIM);
+    doc.text('No dates match this scope.', 40, 130);
+  }
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  doc.save(`isl-date-report-${filterForScope}-${stamp}.pdf`);
+}
+
+document.getElementById('exportCurrentPdfBtn').addEventListener('click', () => exportDateReportPDF('current'));
+document.getElementById('exportAllPdfBtn').addEventListener('click', () => exportDateReportPDF('all'));
+
+/* ---------- Stage pill tabs (drive the hidden #stageFilter select) ---------- */
+document.querySelectorAll('#stageTabs .pill-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#stageTabs .pill-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('stageFilter').value = btn.dataset.value;
+    renderTable();
+  });
+});
+
+/* ---------- Queue lookup ---------- */
+function findCandidates(name){
+  const q = name.trim().toLowerCase();
+  if (!q) return [];
+  return allData.filter(r => r.fullName.toLowerCase().includes(q));
+}
+/* ---------- Two queues ----------
+   1) Waiting list: no submission slot yet. Ordered by join order.
+   2) Appointment queue: has a submission slot (Got Submission / Submitted /
+      Correction) but no appointment yet. Ordered by got-submission date,
+      ties broken by join order.
+   Appointed applicants are done and have no position. */
+const APPT_QUEUE_STAGES = ['gotSubmission', 'submitted', 'correction'];
+const APPOINTED_STAGES = ['appointed', 'visaApproved', 'visaRejected']; // already have an appointment (or a visa result)
+
+function queueOf(person){
+  if (person.stage === 'waiting') return 'waiting';
+  if (APPT_QUEUE_STAGES.includes(person.stage)) return 'appointment';
+  return 'done';
+}
+function apptOrderKey(r){ return `${r.gotSubDate || r.joinDate} ${sortKey(r)}`; }
+
+/* Most applicants never update their status after getting an appointment, so the raw
+   queue is padded with people who are probably already booked. Rule:
+   - frontier = latest got-submission date among people who already have an appointment
+   - only people whose got-submission date is within STALE_DAYS of the frontier (or later) are counted
+   - anyone older is assumed already handled and is NOT counted */
+const STALE_DAYS = 10;
+function getApptWindow(){
+  let frontier = '';
+  allData.forEach(r => {
+    if (APPOINTED_STAGES.includes(r.stage) && r.gotSubDate && r.gotSubDate > frontier) frontier = r.gotSubDate;
+  });
+  return { frontier, cutoff: frontier ? addDaysISO(frontier, -STALE_DAYS) : '' };
+}
+function isApptActive(r, cutoff){
+  return !cutoff || !r.gotSubDate || r.gotSubDate >= cutoff; // no date = can't judge, so count
+}
+
+function peopleAhead(person){
+  const q = queueOf(person);
+  if (q === 'waiting'){
+    return allData.filter(r => r.stage === 'waiting' && sortKey(r) < sortKey(person));
+  }
+  if (q === 'appointment'){
+    const k = apptOrderKey(person);
+    const { cutoff } = getApptWindow();
+    return allData.filter(r => APPT_QUEUE_STAGES.includes(r.stage) && isApptActive(r, cutoff) && apptOrderKey(r) < k);
+  }
+  return [];
+}
+
+function fmtDay(iso){
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Everything the result card, share text, favorites chip and PNG need to say about a person's queues.
+function queueInfo(person){
+  const queue = queueOf(person);
+  const ahead = peopleAhead(person);
+  const n = ahead.length;
+  const verb = n === 1 ? 'person is' : 'people are';
+  const gotOn = fmtDay(person.gotSubDate);
+  // Anyone who already has a submission slot has left the waiting list: 0 ahead there.
+  const wlCleared = { text: '0 ahead', sub: gotOn ? `Cleared — got submission ${gotOn}` : 'Cleared — got submission', state: 'done' };
+  const wlLine = 'WAITING LIST: 0 AHEAD';
+  const wlShare = '⏳ *Waiting list:* 0 ahead (cleared)';
+  // The source site's own estimate, shown exactly as it displays it
+  let expKind = '', expText = '';
+  if (person.expectedAppointment){ expKind = 'Expected appointment'; expText = person.expectedAppointment; }
+  else if (person.expectedSubmission){ expKind = 'Expected submission'; expText = person.expectedSubmission; }
+  const expected = (queue === 'done' || !expText) ? {} : {
+    expectedLine: `${expKind}: ${expText}`,
+    shareExpected: `📅 *${expKind}:* ${expText}`,
+    imgExpected: `${expKind}: ${expText}`.toUpperCase()
+  };
+
+  if (queue === 'waiting'){
+    return {
+      queue, ahead,
+      heroText: String(n), imgHero: String(n),
+      cardCaption: 'Waiting list',
+      caption: 'AHEAD IN WAITING LIST',
+      cardLine: n === 0 ? 'No one in the waiting list is ahead of this person.' : `${n} ${verb} still ahead in the waiting list.`,
+      breakdownTitle: 'Waiting list ahead of you, by join month',
+      breakdownShare: 'Breakdown by join month',
+      imgBreakdown: 'ITINERARY — BY JOIN MONTH',
+      shareLabel: 'Ahead of you in the waiting list',
+      shareExtra: '',
+      wlLine: '',
+      wlBox: { text: `${n} ahead`, sub: n === 0 ? 'You are next for a submission slot' : 'Waiting for a submission slot', state: 'active' },
+      apBox: { text: 'Not started', sub: 'Starts once you get a submission slot', state: 'idle' },
+      chip: `${n} ahead`,
+      monthOf: r => calendarMonthKey(r.joinDate),
+      ...expected
+    };
+  }
+  if (queue === 'appointment'){
+    const win = getApptWindow();
+    const stale = !isApptActive(person, win.cutoff);
+    const key = apptOrderKey(person);
+    const olderNotCounted = stale ? 0 : allData.filter(r => APPT_QUEUE_STAGES.includes(r.stage) && !isApptActive(r, win.cutoff) && apptOrderKey(r) < key).length;
+    const from = win.cutoff ? fmtDay(win.cutoff) : '';
+    const counted = from ? `counted from ${from}` : 'ordered by got-submission date';
+    return {
+      queue, ahead, stale,
+      heroText: String(n), imgHero: String(n),
+      cardCaption: 'For appointment',
+      caption: 'AHEAD FOR APPOINTMENT',
+      cardLine: stale
+        ? `Your got-submission date${gotOn ? ` (${gotOn})` : ''} is older than the counted window (from ${from}). Applicants that far back are usually already booked but haven't updated their status, so no one is counted ahead of you.`
+        : n === 0 ? 'No one is ahead of this person for an appointment.' : `${n} ${verb} ahead for an appointment (${counted}).`,
+      breakdownTitle: 'Ahead of you for an appointment, by got-submission month',
+      breakdownShare: 'Breakdown by got-submission month',
+      imgBreakdown: 'AHEAD — BY SUBMISSION MONTH',
+      shareLabel: 'Ahead of you for an appointment',
+      shareExtra: stale ? `${wlShare}\n⚠️ _Got-submission date is older than the counted window — probably already booked._` : wlShare,
+      wlLine,
+      wlBox: wlCleared,
+      apBox: stale
+        ? { text: 'Not counted', sub: `Older than ${from} — probably already booked. Please update your status.`, state: 'idle' }
+        : { text: `${n} ahead`, sub: `Ordered by got-submission date · ${counted}${olderNotCounted ? ` · ${olderNotCounted} older not counted` : ''}`, state: 'active' },
+      chip: stale ? 'WL 0 · appt old' : `WL 0 · appt ${n}`,
+      monthOf: r => calendarMonthKey(r.gotSubDate || r.joinDate),
+      ...expected
+    };
+  }
+  const when = fmtDay(person.appointmentDate);
+  const apBox = { text: 'Booked', sub: when || 'Appointment booked', state: 'done' };
+  const base = { queue, ahead, breakdownTitle: '', breakdownShare: '', imgBreakdown: '', shareLabel: '',
+    shareExtra: wlShare, wlLine, wlBox: wlCleared, apBox, monthOf: () => 'unknown' };
+
+  if (person.stage === 'visaApproved'){
+    return { ...base, heroText: '✓', imgHero: 'OK', cardCaption: 'Visa approved', caption: 'VISA APPROVED',
+      cardLine: when ? `Visa approved. Appointment was on ${when}.` : 'Visa approved.',
+      shareDoneLine: '✅ *Visa:* Approved', chip: '✓ visa approved' };
+  }
+  if (person.stage === 'visaRejected'){
+    return { ...base, heroText: '✕', imgHero: 'NO', cardCaption: 'Visa rejected', caption: 'VISA REJECTED',
+      cardLine: when ? `Visa rejected. Appointment was on ${when}.` : 'Visa rejected.',
+      shareDoneLine: '❌ *Visa:* Rejected', chip: '✕ visa rejected' };
+  }
+  return { ...base, heroText: '✓', imgHero: 'DONE', cardCaption: 'Appointed',
+    caption: when ? `APPOINTMENT: ${when.toUpperCase()}` : 'APPOINTMENT BOOKED',
+    cardLine: when ? `Appointment booked for ${when}.` : 'Appointment booked.',
+    shareDoneLine: `🎉 *Appointment:* ${when || 'Booked'}`, chip: '✓ appointed' };
+}
+
+function countAheadByMonth(person){
+  const { ahead, monthOf } = queueInfo(person);
+  const counts = {};
+  ahead.forEach(r => {
+    const key = monthOf(r);
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+/* ---------- Appointment queue: count between dates ---------- */
+const RANGE_STAGES = [...APPT_QUEUE_STAGES, ...APPOINTED_STAGES];
+
+function isoLocal(d){
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function addDaysISO(iso, delta){
+  const [y, m, d] = iso.split('-').map(Number);
+  return isoLocal(new Date(y, m - 1, d + delta));
+}
+function monthBoundsISO(key){
+  const [y, m] = key.split('-').map(Number);
+  return [`${key}-01`, isoLocal(new Date(y, m, 0))];
+}
+function fmtDayWd(iso){
+  if (!iso) return 'Date not set';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Quick-range chips (All / latest 7-14-30 days / each month with pending people)
+function renderRangePresets(){
+  const field = document.getElementById('rangeField').value;
+  const from = document.getElementById('rangeFrom').value;
+  const to = document.getElementById('rangeTo').value;
+  const el = document.getElementById('rangePresets');
+
+  const win = getApptWindow();
+  const includeStale = document.getElementById('showStale').checked;
+  const allDates = allData.filter(r => APPOINTED_STAGES.includes(r.stage) || (APPT_QUEUE_STAGES.includes(r.stage) && (includeStale || isApptActive(r, win.cutoff)))).map(r => r[field]).filter(Boolean).sort();
+  const pendDates = allData.filter(r => APPT_QUEUE_STAGES.includes(r.stage) && (includeStale || isApptActive(r, win.cutoff))).map(r => r[field]).filter(Boolean).sort();
+  if (!allDates.length){ el.innerHTML = ''; return; }
+
+  // keep the date pickers open on dates that actually have data
+  ['rangeFrom', 'rangeTo'].forEach(id => {
+    const inp = document.getElementById(id);
+    inp.min = allDates[0];
+    inp.max = allDates[allDates.length - 1];
+  });
+
+  const presets = [{ label: 'All dates', from: '', to: '' }];
+  if (pendDates.length){
+    const latest = pendDates[pendDates.length - 1];
+    [7, 14, 30].forEach(n => presets.push({
+      label: `Latest ${n} days`, from: addDaysISO(latest, -(n - 1)), to: latest,
+      tip: `${n} days ending ${fmtDay(latest)}`
+    }));
+    [...new Set(pendDates.map(d => d.slice(0, 7)))].forEach(key => {
+      const [f, t] = monthBoundsISO(key);
+      const [y, m] = key.split('-').map(Number);
+      presets.push({
+        label: new Date(y, m - 1, 1).toLocaleString('en-GB', { month: 'short', year: 'numeric' }),
+        from: f, to: t, tip: `${fmtDay(f)} – ${fmtDay(t)}`
+      });
+    });
+  }
+
+  el.innerHTML = presets.map((p, i) =>
+    `<button type="button" class="chip-btn${p.from === from && p.to === to ? ' active' : ''}" data-i="${i}"${p.tip ? ` title="${escapeHtml(p.tip)}"` : ''}>${escapeHtml(p.label)}</button>`
+  ).join('');
+  el.querySelectorAll('.chip-btn').forEach(btn => btn.addEventListener('click', () => {
+    const p = presets[Number(btn.dataset.i)];
+    document.getElementById('rangeFrom').value = p.from;
+    document.getElementById('rangeTo').value = p.to;
+    renderApptRange();
+  }));
+}
+
+function renderApptRange(){
+  const from = document.getElementById('rangeFrom').value;
+  const to = document.getElementById('rangeTo').value;
+  const field = document.getElementById('rangeField').value;
+  const box = document.getElementById('rangeResult');
+  const prevToggle = document.getElementById('rangeShowDone');
+  const showAll = prevToggle ? prevToggle.checked : false;
+
+  const win = getApptWindow();
+  const includeStale = document.getElementById('showStale').checked;
+  const queueAll = allData.filter(r => APPT_QUEUE_STAGES.includes(r.stage));
+  const queue = includeStale ? queueAll : queueAll.filter(r => isApptActive(r, win.cutoff));
+  const staleCount = queueAll.length - queueAll.filter(r => isApptActive(r, win.cutoff)).length;
+  document.getElementById('apptQueueCountPill').textContent = allData.length
+    ? `${queue.length} awaiting appointment${!includeStale && staleCount ? ` · ${staleCount} not counted` : ''}`
+    : '';
+  document.getElementById('staleText').textContent = !allData.length ? '' : win.cutoff
+    ? `Counting from ${fmtDay(win.cutoff)} — ${STALE_DAYS} days behind the latest appointment date (${fmtDay(win.frontier)}). Earlier dates (${staleCount} ${staleCount === 1 ? 'person' : 'people'}) are assumed already handled and are not counted.`
+    : 'No appointments reported yet, so everyone is counted.';
+  renderRangePresets();
+  if (!allData.length){ box.innerHTML = ''; return; }
+
+  if (from && to && from > to){
+    box.innerHTML = `<div class="lookup-empty">The “From” date is after the “To” date.</div>`;
+    return;
+  }
+
+  const inRange = r => {
+    if (!from && !to) return true;
+    const d = r[field] || '';
+    if (!d) return false;
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  };
+
+  const pending = queue.filter(inRange);
+  const appointed = allData.filter(r => APPOINTED_STAGES.includes(r.stage) && inRange(r));
+  const by = { gotSubmission: 0, submitted: 0, correction: 0 };
+  pending.forEach(r => { by[r.stage]++; });
+
+  const total = pending.length + appointed.length;
+  const pct = total ? Math.round((appointed.length / total) * 100) : 0;
+
+  let rangeText = 'All dates';
+  if (from && to) rangeText = from === to ? fmtDay(from) : `${fmtDay(from)} – ${fmtDay(to)}`;
+  else if (from) rangeText = `From ${fmtDay(from)}`;
+  else if (to) rangeText = `Up to ${fmtDay(to)}`;
+  const fieldText = field === 'gotSubDate' ? 'got-submission date' : 'join date';
+
+  // Pending / appointed per date, oldest first (front of the queue first)
+  const groups = new Map();
+  allData.filter(r => RANGE_STAGES.includes(r.stage) && inRange(r) && (APPOINTED_STAGES.includes(r.stage) || includeStale || isApptActive(r, win.cutoff))).forEach(r => {
+    const d = r[field] || '';
+    if (!groups.has(d)) groups.set(d, { pending: 0, appointed: 0, g: 0, s: 0, c: 0, exp: new Map() });
+    const g = groups.get(d);
+    if (APPOINTED_STAGES.includes(r.stage)) g.appointed++;
+    else {
+      g.pending++;
+      if (r.expectedAppointment) g.exp.set(r.expectedAppointment, (g.exp.get(r.expectedAppointment) || 0) + 1);
+      if (r.stage === 'gotSubmission') g.g++;
+      else if (r.stage === 'submitted') g.s++;
+      else g.c++;
+    }
+  });
+  const dates = [...groups.keys()].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
+  const shown = dates.filter(d => showAll || groups.get(d).pending > 0);
+  const maxPend = Math.max(1, ...shown.map(d => groups.get(d).pending));
+
+  const tableRows = shown.map(d => {
+    const g = groups.get(d);
+    const w = Math.round((g.pending / maxPend) * 100);
+    const share = pending.length ? Math.round((g.pending / pending.length) * 100) : 0;
+    const isOld = includeStale && field === 'gotSubDate' && win.cutoff && d && d < win.cutoff;
+    const expList = [...g.exp.entries()].sort((a, b) => b[1] - a[1]);
+    const expCell = expList.length
+      ? `${escapeHtml(expList[0][0])}${expList.length > 1 ? ` <span title="${escapeHtml(expList.slice(1).map(e => e[0]).join(' · '))}">+${expList.length - 1}</span>` : ''}`
+      : '—';
+    return `
+      <tr${d ? ` data-date="${escapeHtml(d)}"` : ''} class="${isOld ? 'dp-stale' : ''}" title="Got Submission ${g.g} · Submitted ${g.s} · Under Correction ${g.c}">
+        <td>${escapeHtml(fmtDayWd(d))}${isOld ? ' <span class="dp-tag">not counted</span>' : ''}</td>
+        <td class="dp-pend">${g.pending}</td>
+        <td class="mono">${g.appointed}</td>
+        <td><span class="dp-bar"><span style="width:${w}%"></span></span><span class="dp-pct">${share}%</span></td>
+        ${field === 'gotSubDate' ? `<td class="dp-exp">${expCell}</td>` : ''}
+      </tr>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="range-summary">
+      <div class="range-big">
+        <span class="range-num">${pending.length}</span>
+        <span class="range-label">Awaiting appointment</span>
+      </div>
+      <div>
+        <div class="snapshot-legend">
+          <div class="legend-row"><span class="dot submission"></span>Got Submission<span class="legend-num">${by.gotSubmission}</span></div>
+          <div class="legend-row"><span class="dot submitted"></span>Submitted<span class="legend-num">${by.submitted}</span></div>
+          <div class="legend-row"><span class="dot correction"></span>Under Correction<span class="legend-num">${by.correction}</span></div>
+        </div>
+        <div class="range-appointed">
+          <div class="range-bar"><div class="rb-done" style="width:${pct}%"></div><div class="rb-pending" style="width:${100 - pct}%"></div></div>
+          Already appointed in this range: <strong>${appointed.length}</strong> of ${total} (${pct}%)
+        </div>
+      </div>
+    </div>
+    <div class="date-pending">
+      <div class="dp-head">
+        <div class="dp-title">Pending appointment, by ${fieldText}</div>
+        <label class="dp-toggle"><input type="checkbox" id="rangeShowDone"${showAll ? ' checked' : ''}> Show dates with nothing pending</label>
+      </div>
+      ${shown.length ? `
+        <div class="dp-scroll">
+          <table class="dp-table">
+            <thead><tr><th>Date</th><th>Pending</th><th>Appointed</th><th>Share of pending</th>${field === 'gotSubDate' ? '<th>Expected appointment</th>' : ''}</tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>` : `<div class="lookup-empty">Nothing is pending appointment in this range.</div>`}
+    </div>
+    <div class="range-note">${escapeHtml(rangeText)} · by ${fieldText} · click a date to focus on it</div>
+  `;
+}
+document.getElementById('rangeFrom').addEventListener('input', renderApptRange);
+document.getElementById('rangeTo').addEventListener('input', renderApptRange);
+document.getElementById('rangeField').addEventListener('change', renderApptRange);
+document.getElementById('showStale').addEventListener('change', renderApptRange);
+document.getElementById('rangeReset').addEventListener('click', () => {
+  document.getElementById('rangeFrom').value = '';
+  document.getElementById('rangeTo').value = '';
+  renderApptRange();
+});
+// click a date row to focus the counter on that single day; toggle hidden rows
+document.getElementById('rangeResult').addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-date]');
+  if (!tr) return;
+  document.getElementById('rangeFrom').value = tr.dataset.date;
+  document.getElementById('rangeTo').value = tr.dataset.date;
+  renderApptRange();
+});
+document.getElementById('rangeResult').addEventListener('change', (e) => {
+  if (e.target.id === 'rangeShowDone') renderApptRange();
+});
+
+const STAGE_EMOJI = {
+  waiting: "⏳",
+  gotSubmission: "📨",
+  submitted: "✅",
+  correction: "✏️",
+  appointed: "🎉",
+  visaApproved: "🌟",
+  visaRejected: "❌"
+};
+
+/* ---------- Favorites (localStorage) ---------- */
+const FAVORITES_KEY = 'isl_favorites';
+const MAX_FAVORITES = 20;
+
+// Includes stage in the key (in addition to name/date/time) to reduce the
+// already-rare chance of two different rows colliding to the same favorite.
+function personKey(person){ return `${person.fullName}|${person.joinDate}|${person.joinTime}|${person.stage}`; }
+
+function getFavorites(){
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){ return []; }
+}
+function saveFavorites(list){
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(list)); } catch(e){ /* storage unavailable */ }
+}
+function isFavorite(person){
+  return getFavorites().some(f => f.key === personKey(person));
+}
+function addFavorite(person){
+  const list = getFavorites();
+  const key = personKey(person);
+  if (list.some(f => f.key === key)) return list;
+  if (list.length >= MAX_FAVORITES) return list; // cap reached
+  list.push({ key, fullName: person.fullName, joinDate: person.joinDate, joinTime: person.joinTime });
+  saveFavorites(list);
+  return list;
+}
+function removeFavorite(key){
+  const list = getFavorites().filter(f => f.key !== key);
+  saveFavorites(list);
+  return list;
+}
+function findPersonByKey(key){
+  return allData.find(r => personKey(r) === key) || null;
+}
+function renderFavoritesPanel(){
+  const panel = document.getElementById('favoritesPanel');
+  const favs = getFavorites();
+  if (favs.length === 0){ panel.innerHTML = ''; return; }
+
+  const rows = favs.map(f => {
+    const person = findPersonByKey(f.key);
+    if (!person){
+      return `
+        <div class="fav-item">
+          <div class="fav-item-main">
+            <span class="fav-name">${escapeHtml(f.fullName)}</span>
+            <span class="fav-sub">not found</span>
+          </div>
+          <button class="fav-remove" data-key="${escapeHtml(f.key)}" title="Remove">✕</button>
+        </div>`;
+    }
+    const info = queueInfo(person);
+    return `
+      <div class="fav-item">
+        <div class="fav-item-main" data-key="${escapeHtml(f.key)}">
+          <span class="fav-name">${escapeHtml(person.fullName)}</span>
+          <span class="fav-sub">${escapeHtml(info.chip)}</span>
+        </div>
+        <button class="fav-remove" data-key="${escapeHtml(f.key)}" title="Remove">✕</button>
+      </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="fav-title">Tracked (${favs.length}/${MAX_FAVORITES})</div>
+    <div class="fav-list">${rows}</div>
+  `;
+
+  panel.querySelectorAll('.fav-item-main').forEach(el => {
+    el.addEventListener('click', () => {
+      const person = findPersonByKey(el.dataset.key);
+      if (person) renderPositionResult(person);
+    });
+  });
+  panel.querySelectorAll('.fav-remove').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFavorite(el.dataset.key);
+      renderFavoritesPanel();
+    });
+  });
+}
+
+function buildShareText(person, ahead, breakdown, info){
+  const emoji = STAGE_EMOJI[person.stage] || "🛂";
+  const lines = [
+    `🛂 *ISL Visa Queue Status*`,
+    ``,
+    `👤 *Name:* ${person.fullName}`,
+    `📅 *Joined:* ${person.joinDate} at ${person.joinTime}`,
+    `${emoji} *Status:* ${stageLabel(person.stage)}`,
+    ``,
+    info.queue === 'done'
+      ? info.shareDoneLine
+      : `🔢 *${info.shareLabel}:* ${ahead.length}`,
+  ];
+  if (info.shareExtra) lines.splice(lines.length - 1, 0, info.shareExtra);
+  if (info.shareExpected) lines.push(info.shareExpected);
+  if (breakdown.length){
+    lines.push(``, `📊 *${info.breakdownShare}:*`);
+    breakdown.forEach(([key, count]) => lines.push(`▫️ ${calendarMonthLabel(key)}: *${count}*`));
+  }
+  lines.push(
+    ``,
+    `🕒 _Checked ${new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}_`
+  );
+  return lines.join('\n');
+}
+
+function renderCandidateList(candidates){
+  const box = document.getElementById('lookupResults');
+  if (candidates.length === 0){
+    box.innerHTML = `<div class="lookup-empty">No applicant found with that name.</div>`;
+    return;
+  }
+  const sorted = candidates.sort((a,b) => sortKey(a).localeCompare(sortKey(b)));
+  const items = sorted.map((c, i) => `
+    <div class="candidate-item" data-index="${i}">
+      <div>
+        <div class="candidate-name">${escapeHtml(c.fullName)}</div>
+        <div class="candidate-meta">${escapeHtml(c.joinDate)} · ${escapeHtml(c.joinTime)} · ${escapeHtml(c.month)}</div>
+      </div>
+      <span class="stamp ${c.stage}">${stageLabel(c.stage)}</span>
+    </div>
+  `).join('');
+  box.innerHTML = `<div class="candidate-list">${items}</div>`;
+  box.querySelectorAll('.candidate-item').forEach(el => {
+    el.addEventListener('click', () => renderPositionResult(sorted[parseInt(el.dataset.index, 10)]));
+  });
+}
+
+const ICONS = {
+  star: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
+  whatsapp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`
+};
+
+function renderPositionResult(person){
+  const info = queueInfo(person);
+  const ahead = info.ahead;
+  const breakdown = countAheadByMonth(person);
+  const box = document.getElementById('lookupResults');
+
+  const breakdownHtml = breakdown.length === 0 ? '' : `
+    <div class="breakdown">
+      <div class="breakdown-title">${info.breakdownTitle}</div>
+      ${breakdown.map(([key, count]) => `
+        <div class="breakdown-row"><span>${calendarMonthLabel(key)}</span><span class="bd-count">${count}</span></div>
+      `).join('')}
+    </div>
+  `;
+
+  const scoreHtml = `
+    <div class="queue-scores">
+      ${[['Waiting list', info.wlBox], ['Appointment queue', info.apBox]].map(([label, b]) => `
+        <div class="score-box ${b.state}">
+          <div class="score-label">${label}</div>
+          <div class="score-val">${escapeHtml(b.text)}</div>
+          <div class="score-sub">${escapeHtml(b.sub)}</div>
+        </div>`).join('')}
+    </div>
+  `;
+
+  const updateHtml = info.queue === 'appointment'
+    ? `<div class="update-link-row">Got your appointment or something changed? <a href="https://visatracker.waleedingermany.com/apply" target="_blank" rel="noopener">Update your status on the tracker →</a></div>`
+    : '';
+
+  const alreadyFav = isFavorite(person);
+  const favCap = getFavorites().length >= MAX_FAVORITES && !alreadyFav;
+
+  box.innerHTML = `
+    <div class="position-result">
+      <div class="position-num"><div class="pn-num">${info.heroText}</div><div class="pn-cap">${info.cardCaption}</div></div>
+      <div class="position-detail">
+        <div class="name">${escapeHtml(person.fullName)}</div>
+        <div class="meta">Joined ${escapeHtml(person.joinDate)} at ${escapeHtml(person.joinTime)} &middot; currently <span class="stamp ${person.stage}">${stageLabel(person.stage)}</span></div>
+        <div class="meta">
+          ${info.cardLine}
+        </div>
+        ${info.expectedLine ? `<div class="meta expected-line">📅 ${escapeHtml(info.expectedLine)}</div>` : ''}
+      </div>
+      <button class="fav-add-btn" id="favToggleBtn" ${favCap ? 'disabled title="Remove a tracked name first"' : ''}>
+        ${ICONS.star} <span class="btn-label">${alreadyFav ? 'Tracked' : 'Track'}</span>
+      </button>
+    </div>
+    ${scoreHtml}
+    ${updateHtml}
+    ${breakdownHtml}
+    <div class="share-row">
+      <button class="share-btn" id="copyBtn">${ICONS.copy} <span class="btn-label">Copy</span></button>
+      <button class="share-btn whatsapp" id="whatsappBtn">${ICONS.whatsapp} <span class="btn-label">WhatsApp</span></button>
+      <button class="share-btn" id="downloadBtn">${ICONS.download} <span class="btn-label">Download image</span></button>
+    </div>
+    <span class="back-link" id="backToSearch">&larr; Search another name</span>
+  `;
+
+  document.getElementById('favToggleBtn').addEventListener('click', (e) => {
+    if (isFavorite(person)){
+      removeFavorite(personKey(person));
+    } else {
+      if (getFavorites().length >= MAX_FAVORITES) return;
+      addFavorite(person);
+    }
+    renderFavoritesPanel();
+    renderPositionResult(person);
+  });
+
+  document.getElementById('whatsappBtn').addEventListener('click', () => {
+    const text = buildShareText(person, ahead, breakdown, info);
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener');
+  });
+
+  document.getElementById('backToSearch').addEventListener('click', () => {
+    box.innerHTML = '';
+    document.getElementById('lookupInput').value = '';
+    document.getElementById('lookupInput').focus();
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async (e) => {
+    const text = buildShareText(person, ahead, breakdown, info);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    const btn = e.currentTarget;
+    const label = btn.querySelector('.btn-label');
+    const original = label.textContent;
+    label.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { label.textContent = original; btn.classList.remove('copied'); }, 2000);
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    downloadResultImage(person, ahead, breakdown, info);
+  });
+}
+
+/* ---------- PNG export — "Boarding Pass" 9:16 story card (recolored to match glass/blue theme) ---------- */
+const STAGE_COLORS = {
+  waiting: '#94A3B8',
+  gotSubmission: '#3B82F6',
+  submitted: '#14B8A6',
+  correction: '#F59E0B',
+  appointed: '#22C55E',
+  visaApproved: '#A855F7',
+  visaRejected: '#EF4444'
+};
+
+function wrapText(ctx, text, maxWidth){
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach(word => {
+    const test = current ? `${current} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && current){
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+function shadeColor(hex, percent){
+  const num = parseInt(hex.replace('#',''), 16);
+  let r = (num >> 16) + Math.round(255 * percent);
+  let g = ((num >> 8) & 0x00FF) + Math.round(255 * percent);
+  let b = (num & 0x0000FF) + Math.round(255 * percent);
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function roundRectPath(ctx, x, y, w, h, r){
+  const rr = typeof r === 'number' ? [r,r,r,r] : r;
+  const [tl,tr,br,bl] = rr;
+  ctx.beginPath();
+  ctx.moveTo(x+tl, y);
+  ctx.lineTo(x+w-tr, y);
+  ctx.arcTo(x+w, y, x+w, y+tr, tr);
+  ctx.lineTo(x+w, y+h-br);
+  ctx.arcTo(x+w, y+h, x+w-br, y+h, br);
+  ctx.lineTo(x+bl, y+h);
+  ctx.arcTo(x, y+h, x, y+h-bl, bl);
+  ctx.lineTo(x, y+tl);
+  ctx.arcTo(x, y, x+tl, y, tl);
+  ctx.closePath();
+}
+
+function drawPlaneIcon(ctx, cx, cy, size, fill){
+  ctx.save();
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(cx - size, cy + size*0.55);
+  ctx.lineTo(cx + size*1.1, cy - size*0.05);
+  ctx.lineTo(cx - size*0.15, cy + size*0.15);
+  ctx.lineTo(cx - size*0.35, cy + size*0.95);
+  ctx.lineTo(cx - size*0.1, cy + size*0.35);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPerforation(ctx, cardX0, cardX1, y, holeR, holeColor, dotColor){
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(cardX0, y, holeR, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cardX1, y, holeR, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.setLineDash([2, 12]);
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = dotColor;
+  ctx.beginPath();
+  ctx.moveTo(cardX0 + holeR + 14, y);
+  ctx.lineTo(cardX1 - holeR - 14, y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function downloadResultImage(person, ahead, breakdown, info){
+  const W = 1080;
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+
+  const SANS = `'Inter', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
+  const MONO = `ui-monospace, SFMono-Regular, 'Roboto Mono', Consolas, monospace`;
+
+  const INK = '#0f172a';
+  const SUB = '#64748b';
+  const FAINT = '#94a3b8';
+  const CARD_BG = '#f8fafc';
+  const ROW_TINT = '#eef2f9';
+
+  const accent = STAGE_COLORS[person.stage] || '#3b82f6';
+  const accentDark = shadeColor(accent, -0.28);
+
+  const cardX0 = 70, cardX1 = W - 70;
+  const pad = 50;
+
+  mctx.font = `800 52px ${SANS}`;
+  const nameLines = wrapText(mctx, person.fullName, (cardX1 - cardX0) - pad * 2);
+  const stripH = 190 + nameLines.length * 62;
+
+  const fieldRowH = 110;
+  const holeR = 32;
+  const perf1Y_rel = stripH + fieldRowH + 40;
+
+  let hRel = perf1Y_rel + 70;
+  const heroNumH = 210;
+  hRel += heroNumH;
+  const extraLines = [info.wlLine, info.imgExpected].filter(Boolean);
+  hRel += 60 + extraLines.length * 40;
+  hRel += 80;
+  hRel += 50;
+
+  const maxRows = Math.min(breakdown.length, 6);
+  const rowH = 64;
+  const breakdownH = breakdown.length ? (40 + maxRows * rowH + (breakdown.length > maxRows ? 40 : 0)) : 0;
+  hRel += breakdownH;
+
+  const perf2Y_rel = hRel + 40;
+  const barcodeH = 90;
+  const footerH = 150;
+  const cardH = perf2Y_rel + holeR + 40 + barcodeH + footerH;
+
+  const MARGIN = 140;
+  const H = Math.max(1920, cardH + MARGIN * 2);
+  const cardY0 = Math.round((H - cardH) / 2);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+  bgGrad.addColorStop(0, '#0b0f1a');
+  bgGrad.addColorStop(0.5, '#132849');
+  bgGrad.addColorStop(1, '#0e1a2e');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  const glow = ctx.createRadialGradient(W*0.18, H*0.1, 0, W*0.18, H*0.1, W*0.9);
+  glow.addColorStop(0, 'rgba(59,130,246,0.16)');
+  glow.addColorStop(1, 'rgba(59,130,246,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  const perf1Y = cardY0 + perf1Y_rel;
+  const perf2Y = cardY0 + perf2Y_rel;
+  const cardY1 = cardY0 + cardH;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 45;
+  ctx.shadowOffsetY = 22;
+  roundRectPath(ctx, cardX0, cardY0, cardX1 - cardX0, cardY1 - cardY0, 40);
+  ctx.fillStyle = CARD_BG;
+  ctx.fill();
+  ctx.restore();
+
+  const stripGrad = ctx.createLinearGradient(cardX0, cardY0, cardX1, cardY0 + stripH);
+  stripGrad.addColorStop(0, accent);
+  stripGrad.addColorStop(1, accentDark);
+  roundRectPath(ctx, cardX0, cardY0, cardX1 - cardX0, stripH, [40, 40, 0, 0]);
+  ctx.fillStyle = stripGrad;
+  ctx.fill();
+
+  drawPlaneIcon(ctx, cardX1 - 110, cardY0 + 66, 24, 'rgba(255,255,255,0.9)');
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `600 26px ${MONO}`;
+  ctx.letterSpacing = '6px';
+  ctx.fillText('ISL VISA QUEUE', W/2, cardY0 + 56);
+  ctx.font = `400 18px ${MONO}`;
+  ctx.letterSpacing = '3px';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.fillText('E-BOARDING · APPLICANT PASS', W/2, cardY0 + 92);
+  ctx.letterSpacing = '0px';
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `800 52px ${SANS}`;
+  let ny = cardY0 + 150;
+  nameLines.forEach(line => { ctx.fillText(line, W/2, ny); ny += 62; });
+
+  const fieldY = cardY0 + stripH + 50;
+  const fields = [
+    ['JOINED', person.joinDate],
+    ['TIME', person.joinTime],
+    ['CLASS', stageLabel(person.stage).toUpperCase()]
+  ];
+  const segW = (cardX1 - cardX0) / 3;
+  fields.forEach(([label, val], i) => {
+    const cx = cardX0 + segW * i + segW / 2;
+    ctx.fillStyle = SUB;
+    ctx.font = `600 19px ${MONO}`;
+    ctx.letterSpacing = '2px';
+    ctx.fillText(label, cx, fieldY);
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = INK;
+    ctx.font = `700 28px ${SANS}`;
+    ctx.fillText(val, cx, fieldY + 36);
+
+    if (i > 0){
+      const x = cardX0 + segW * i;
+      ctx.save();
+      ctx.setLineDash([2, 8]);
+      ctx.strokeStyle = '#d6dde8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, fieldY - 30);
+      ctx.lineTo(x, fieldY + 55);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  drawPerforation(ctx, cardX0, cardX1, perf1Y, holeR, CARD_BG, '#d6dde8');
+
+  let hy = perf1Y + 70;
+  ctx.fillStyle = accent;
+  ctx.font = `800 208px ${SANS}`;
+  ctx.fillText(info.imgHero, W/2, hy + heroNumH - 70);
+  hy += heroNumH;
+
+  ctx.fillStyle = SUB;
+  ctx.font = `600 26px ${MONO}`;
+  ctx.letterSpacing = '4px';
+  ctx.fillText(info.caption, W/2, hy);
+  ctx.letterSpacing = '0px';
+  extraLines.forEach(line => {
+    ctx.fillStyle = FAINT;
+    ctx.font = `600 22px ${MONO}`;
+    ctx.letterSpacing = '2px';
+    ctx.fillText(line, W/2, hy + 40);
+    ctx.letterSpacing = '0px';
+    hy += 40;
+  });
+  hy += 60;
+
+  const pillLabel = stageLabel(person.stage).toUpperCase();
+  ctx.font = `700 24px ${MONO}`;
+  ctx.letterSpacing = '2px';
+  const pillTextW = ctx.measureText(pillLabel).width;
+  ctx.letterSpacing = '0px';
+  const pillW = pillTextW + 70, pillH = 54;
+  const pillX = W/2 - pillW/2, pillY = hy;
+  roundRectPath(ctx, pillX, pillY, pillW, pillH, pillH/2);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.font = `700 24px ${MONO}`;
+  ctx.letterSpacing = '2px';
+  ctx.fillText(pillLabel, W/2, pillY + pillH/2 + 8);
+  ctx.letterSpacing = '0px';
+  hy += pillH + 50;
+
+  if (breakdown.length){
+    ctx.textAlign = 'left';
+    ctx.fillStyle = FAINT;
+    ctx.font = `600 21px ${MONO}`;
+    ctx.letterSpacing = '2px';
+    ctx.fillText(info.imgBreakdown, cardX0 + 50, hy);
+    ctx.letterSpacing = '0px';
+    hy += 40;
+
+    for (let i = 0; i < maxRows; i++){
+      const [key, count] = breakdown[i];
+      if (i % 2 === 0){
+        ctx.fillStyle = ROW_TINT;
+        ctx.fillRect(cardX0 + 30, hy - 8, (cardX1 - cardX0) - 60, rowH - 14);
+      }
+      ctx.fillStyle = INK;
+      ctx.font = `400 28px ${SANS}`;
+      ctx.textAlign = 'left';
+      ctx.fillText(calendarMonthLabel(key), cardX0 + 50, hy + rowH/2 - 4);
+      ctx.fillStyle = accentDark;
+      ctx.font = `700 28px ${SANS}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(String(count), cardX1 - 50, hy + rowH/2 - 4);
+      hy += rowH;
+    }
+    if (breakdown.length > maxRows){
+      ctx.textAlign = 'center';
+      ctx.fillStyle = FAINT;
+      ctx.font = `400 22px ${SANS}`;
+      ctx.fillText(`+ ${breakdown.length - maxRows} more month${breakdown.length - maxRows > 1 ? 's' : ''}`, W/2, hy + 20);
+      hy += 40;
+    }
+  }
+
+  drawPerforation(ctx, cardX0, cardX1, perf2Y, holeR, CARD_BG, '#d6dde8');
+
+  let bx = cardX0 + 60;
+  const barTop = perf2Y + 40;
+  const barMaxX = cardX1 - 60;
+  let seed = 0;
+  for (let i = 0; i < person.fullName.length; i++) seed += person.fullName.charCodeAt(i);
+  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  ctx.fillStyle = INK;
+  while (bx < barMaxX){
+    const bw = 2 + Math.floor(rand() * 7);
+    ctx.fillRect(bx, barTop, bw, barcodeH);
+    bx += bw + 3 + Math.floor(rand() * 6);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = SUB;
+  ctx.font = `500 20px ${MONO}`;
+  ctx.letterSpacing = '2px';
+  ctx.fillText(`ISL · ${person.joinDate.replace(/-/g, '')}`, W/2, barTop + barcodeH + 34);
+  ctx.letterSpacing = '0px';
+
+  ctx.fillStyle = FAINT;
+  ctx.font = `400 20px ${SANS}`;
+  ctx.fillText(
+    `Checked ${new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`,
+    W/2, cardY1 - 74
+  );
+  ctx.font = `400 19px ${MONO}`;
+  ctx.fillText('Built by Muntazir Mahdi · muntazirmahdi.de@gmail.com', W/2, cardY1 - 42);
+
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = person.fullName.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    a.href = url;
+    a.download = `visa-boarding-pass-${safeName}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
+function runLookup(){
+  const name = document.getElementById('lookupInput').value;
+  const candidates = findCandidates(name);
+  if (candidates.length === 1) renderPositionResult(candidates[0]);
+  else renderCandidateList(candidates);
+  closeAutocomplete();
+}
+document.getElementById('lookupBtn').addEventListener('click', runLookup);
+document.getElementById('lookupInput').addEventListener('keydown', e => {
+  const list = document.getElementById('autocompleteList');
+  const items = [...list.querySelectorAll('.ac-item')];
+  const activeIdx = items.findIndex(el => el.classList.contains('active'));
+
+  if (list.classList.contains('open') && items.length){
+    if (e.key === 'ArrowDown'){
+      e.preventDefault();
+      const next = items[Math.min(activeIdx + 1, items.length - 1)];
+      items.forEach(el => el.classList.remove('active'));
+      next.classList.add('active');
+      next.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (e.key === 'ArrowUp'){
+      e.preventDefault();
+      const prev = items[Math.max(activeIdx - 1, 0)];
+      items.forEach(el => el.classList.remove('active'));
+      prev.classList.add('active');
+      prev.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (e.key === 'Enter' && activeIdx >= 0){
+      e.preventDefault();
+      selectAutocompleteItem(items[activeIdx].dataset.key);
+      return;
+    }
+    if (e.key === 'Escape'){ closeAutocomplete(); return; }
+  }
+  if (e.key === 'Enter') runLookup();
+});
+
+/* ---------- Autocomplete ---------- */
+function closeAutocomplete(){
+  const list = document.getElementById('autocompleteList');
+  list.classList.remove('open');
+  list.innerHTML = '';
+}
+function selectAutocompleteItem(key){
+  const person = findPersonByKey(key);
+  closeAutocomplete();
+  if (person){
+    document.getElementById('lookupInput').value = person.fullName;
+    renderPositionResult(person);
+  }
+}
+function renderAutocomplete(query){
+  const list = document.getElementById('autocompleteList');
+  const q = query.trim().toLowerCase();
+  if (!q){ closeAutocomplete(); return; }
+
+  const matches = allData.filter(r => r.fullName.toLowerCase().includes(q)).slice(0, 8);
+  if (matches.length === 0){ closeAutocomplete(); return; }
+
+  list.innerHTML = matches.map(m => `
+    <div class="ac-item" data-key="${escapeHtml(personKey(m))}">
+      <span class="ac-name">${escapeHtml(m.fullName)}</span>
+      <span class="ac-meta">${escapeHtml(m.joinDate)} · <span class="stamp ${m.stage}" style="padding:1px 6px;">${stageLabel(m.stage)}</span></span>
+    </div>
+  `).join('');
+  list.classList.add('open');
+  list.querySelectorAll('.ac-item').forEach(el => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectAutocompleteItem(el.dataset.key);
+    });
+  });
+}
+document.getElementById('lookupInput').addEventListener('input', (e) => renderAutocomplete(e.target.value));
+document.getElementById('lookupInput').addEventListener('focus', (e) => { if (e.target.value) renderAutocomplete(e.target.value); });
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.autocomplete-wrap')) closeAutocomplete();
+});
+
+
+/* ---------- Load / refresh ---------- */
+async function loadData(){
+  // Guard against overlapping loads (manual refresh click firing while the
+  // 5-minute auto-refresh timer is already mid-flight, or a double click).
+  if (isLoadingData) return;
+  isLoadingData = true;
+
+  const stateMsg = document.getElementById('stateMsg');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const refreshLabel = refreshBtn.querySelector('.btn-label');
+  refreshBtn.disabled = true;
+  refreshLabel.textContent = 'Refreshing…';
+
+  try {
+    const months = await fetchMonths();
+
+    const settled = await Promise.allSettled(months.map(fetchMonthData));
+
+    const failedMonths = [];
+    const successRows = [];
+    settled.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        successRows.push(...result.value);
+      } else {
+        failedMonths.push({ month: months[i], reason: result.reason?.message || String(result.reason) });
+        console.error(`Failed to load ${months[i]}:`, result.reason);
+      }
+    });
+
+    const seen = new Set();
+    allData = [];
+    successRows.forEach(r => {
+      const key = `${r.fullName}|${r.joinDate}|${r.joinTime}`;
+      if (!seen.has(key)) { seen.add(key); allData.push(r); }
+    });
+
+    const uniqueLabels = [...new Set(allData.map(r => r.month))].sort();
+    populateMonthFilter(uniqueLabels);
+
+    updateStats(allData);
+    renderTable();
+    renderMonthlyProgress();
+    renderApptRange();
+    renderDateReport();
+    renderFavoritesPanel();
+
+    document.getElementById('lastUpdated').textContent =
+      new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+
+    const topBanner = document.getElementById('topBanner');
+
+    if (failedMonths.length > 0 && allData.length > 0) {
+      stateMsg.classList.add('error');
+      stateMsg.style.display = 'block';
+      stateMsg.textContent =
+        `Showing partial data. Failed to load: ${failedMonths.map(f => f.month).join(', ')}. ` +
+        `Check console for details.`;
+
+      topBanner.style.display = 'flex';
+      topBanner.innerHTML =
+        `⚠️ <span><strong>Some data failed to load</strong> even after retrying (${escapeHtml(failedMonths.map(f => f.month).join(', '))}) — numbers below may be incomplete. <a id="bannerRetryLink">Retry now</a></span>`;
+      document.getElementById('bannerRetryLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        loadData();
+      });
+    } else if (failedMonths.length > 0 && allData.length === 0) {
+      throw new Error(failedMonths.map(f => `${f.month}: ${f.reason}`).join(' | '));
+    } else {
+      stateMsg.classList.remove('error');
+      topBanner.style.display = 'none';
+      topBanner.innerHTML = '';
+      if (allData.length === 0) {
+        stateMsg.style.display = 'block';
+        stateMsg.textContent = 'No applicants found.';
+      } else {
+        stateMsg.style.display = 'none';
+      }
+    }
+
+  } catch (err) {
+    stateMsg.classList.add('error');
+    stateMsg.style.display = 'block';
+    stateMsg.textContent = `Could not load data (${err.message}). Open the browser console for details.`;
+    console.error(err);
+  } finally {
+    refreshBtn.disabled = false;
+    refreshLabel.textContent = 'Refresh';
+    isLoadingData = false;
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+document.getElementById('searchBox').addEventListener('input', renderTable);
+document.getElementById('stageFilter').addEventListener('change', renderTable);
+document.getElementById('monthFilter').addEventListener('change', renderTable);
+setInterval(loadData, AUTO_REFRESH_MS);
+
+loadData();
+</script>
+
+</body>
+</html>
